@@ -1,34 +1,40 @@
 apiVersion: batch/v1
-kind: Job
+kind: CronJob
 metadata:
-  name: retail-api-job
+  name: retail-api-cronjob
   namespace: default
 spec:
-  template:
+  schedule: "*/5 * * * *"  # Every 5 minutes
+  jobTemplate:
     spec:
-      containers:
-      - name: api-caller
-        image: gcr.io/atomic-snow-462306-r1/retail-jobs:latest
-        env:
-        - name: exitCode
-          value: "0"
-        volumeMounts:
-        - name: secrets-volume
-          mountPath: /etc/secrets
-          readOnly: true
-        resources:
-          requests:
-            memory: "64Mi"
-            cpu: "50m"
-          limits:
-            memory: "128Mi"
-            cpu: "100m"
-      volumes:
-      - name: secrets-volume
-        secret:
-          secretName: retail-job-secrets
-          defaultMode: 0600
-          optional: true
-      restartPolicy: Never
-  backoffLimit: 2
-  ttlSecondsAfterFinished: 3600
+      template:
+        metadata:
+          annotations:
+            sidecar.istio.io/inject: "false"
+        spec:
+          containers:
+            - name: api-caller
+              image: gcr.io/atomic-snow-462306-r1/retail-jobs:latest
+              env:
+                - name: exitCode
+                  value: "0"
+              volumeMounts:
+                - name: secrets-volume
+                  mountPath: /etc/secrets
+                  readOnly: true
+              resources:
+                requests:
+                  memory: "32Mi"
+                  cpu: "10m"
+                limits:
+                  memory: "64Mi"
+                  cpu: "50m"
+          volumes:
+            - name: secrets-volume
+              secret:
+                secretName: retail-job-secrets
+                defaultMode: 0600
+                optional: true
+          restartPolicy: Never
+      backoffLimit: 2
+      ttlSecondsAfterFinished: 3600
